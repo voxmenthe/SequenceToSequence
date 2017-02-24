@@ -4,6 +4,7 @@ import random
 from DataUtils import DataUtils
 from Config import Config
 
+
 class Seq2SeqModel(LanguageModel):
 
     def load_data(self):
@@ -68,18 +69,42 @@ class Seq2SeqModel(LanguageModel):
             return (w,b)
 
     # Embedding and attention function
-    def add_embedding(self, en_inputs, de_inputs, cell, projection, do_decode):
-        return tf.contrib.legacy_seq2seq.embedding_attention(
-            en_inputs,
-            de_inputs,
-            cell,
-            num_encoder_symbols=self.config.from_vocab_size,
-            num_decoder_symbols=self.config.to_vocab_size,
-            embedding_size=self.config.size,
-            output_projection=projection
-            feed_previous=do_decode,
-            dtype=self.config.dtype
-        )
+    def add_embedding(self):
+        """
+        input:
+        inputs: input placeholder in shape [batch_size, input_size]
+
+        output:
+        embedded: embedded input in shape[batch_size*rnn_hidden, time_step_size]
+        """
+        with tf.device('/cpu:0'):
+            with tf.variable_scope("embedding") as scope:
+                L = tf.get_variable("L",[self.config.from_vocab_size, self.config.encode_hidden_size], initializer = self.config.initializer)
+                embeds = tf.nn.embedding_lookup(L, self.en_input_placeholder)
+                embedded = [tf.squeeze(x) for x in tf.split(embeds, [tf.ones([self.config.encode_num_steps], tf.int32)], axis=1)]
+        return embedded
+    
+    def LSTM_cell(self):
+        self.cell = tf.contrib.rnn.BasicLSTMCell(self.config.encode_hidden_size)
+    
+    def encoder_layer(self, inputs):
+        """
+        inputs: embedded encoder inputs
+        outputs: a tuple of (outputs, states)
+        """
+        initial_state = (tf.zeros([self.config.batch_size, self.config.encode_hidden_size]), tf.zeros([self.config.batch_size, self.config.encode_hidden_size]))
+        state = initial_state
+        cell = self.cell
+        outputs = []
+        states = []
+
+        for i in xrange(self.config.encode_num_steps):
+            output, state = cell(inputs, state)
+            inputs = output
+            outputs.append(output)
+            states.append(state)
+            
+        return (outputs, states)
 
         # Simple attention function - please let me know if the inputs/outputs look
       # correct and if they work with your code - still needs work

@@ -4,7 +4,7 @@ import re
 from tensorflow.python.platform import gfile
 import tensorflow as tf
 
-class DataUtils:
+class DataUtils():
     _PAD = b"_PAD"
     _GO = b"_GO"
     _EOS = b"_EOS"
@@ -15,12 +15,17 @@ class DataUtils:
     GO_ID = 1
     EOS_ID = 2
     UNK_ID = 3
-
-    def __init__(self, from_train_file, from_vocab_file, to_train_file,
-                 to_vocab_file, from_dev_file, to_dev_file,
-                 from_test_file, to_test_file):
+    
+    def __init__(self, from_train_file='data/train.en', 
+                 from_vocab_file='data/vocab.en', 
+                 to_train_file='data/train.vi',
+                 to_vocab_file='data/vocab.vi', 
+                 from_dev_file='data/tst2012.en', 
+                 to_dev_file='data/tst2012.vi',
+                 from_test_file='data/tst2013.en', 
+                 to_test_file='data/tst2013.vi'):
         self.from_train_file   = from_train_file
-        self.source_vocab_file = source_vocab_file
+        self.source_vocab_file = from_vocab_file
         self.to_train_file     = to_train_file
         self.to_vocab_file     = to_vocab_file
         self.from_dev_file     = from_dev_file
@@ -117,3 +122,7 @@ class DataUtils:
         return (from_train_ids_path, to_train_ids_path,
               from_dev_ids_path, to_dev_ids_path,
               from_vocab_path, to_vocab_path)
+    
+if __name__ == "__main__":
+    du = DataUtils()
+    

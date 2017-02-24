@@ -81,6 +81,33 @@ class Seq2SeqModel(LanguageModel):
             dtype=self.config.dtype
         )
 
+    # Simple attention function - please let me know if the inputs/outputs look
+    # correct and if they work with your code - still needs work
+    def attention_probs(self, en_states, de_inputs, num_attn_layers,size=1500):
+        cell = tf.contrib.rnn.GRUCell(size)
+        
+        # v is our attention vector with probs
+        v = np.zeros(en_states.shape)
+
+        # Get attention masks using en_states
+        
+
+        # Attention mask is a softmax of v^T * tanh(...).
+        s = math_ops.reduce_sum(v[a] * math_ops.tanh(en_states[a] + y),
+                              [2, 3])
+        a = nn_ops.softmax(s)
+
+        """ Currently I am just returning the attention vector dot producted
+        with the encoder hidden states but we may eventually want to return
+        something like: 
+        A tuple of the form (outputs, state), where:
+            outputs: A list of the same length as decoder_inputs of 2D Tensors of
+                shape [batch_size x output_size]. These represent the generated outputs.
+            state: The state of each decoder cell the final time-step.
+                It is a 2D Tensor of shape [batch_size x cell.state_size].
+        """
+        return v.dot(en_states)
+
     # Loss function
     def add_loss_op(self, inputs, labels):
         labels = tf.reshape(labels, [-1,1])

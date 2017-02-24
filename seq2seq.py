@@ -4,7 +4,6 @@ import random
 from DataUtils import DataUtils
 from Config import Config
 
-
 class Seq2SeqModel(LanguageModel):
 
     def load_data(self):
@@ -42,12 +41,8 @@ class Seq2SeqModel(LanguageModel):
             encoder_inputs.append(tf.placeholder(tf.int32, shape=[None],
                                 name="encoder{0}".format(i)))
         feed_dict['encoder_inputs'] = encoder_inputs
-        for i in xrange(self.config.buckets[-1][1]+1):
-            decoder_inputs.append(tf.placeholder(tf.int32, shape=[None],
-                                name="decoder{0}".format(i)))
-            to_weights.append(tf.placeholder(tf.float32, shape=[None],
-                                name="weight{0}".format(i)))
-        targets = [decoder_inputs[i+1] for i in xrange(len(decoder_inputs))]
+
+        decoder_inputs, to_weights, targets = self.add_decoding_layer()
 
         feed_dict['decoder_inputs'] = decoder_inputs
         feed_dict['to_weights'] = to_weights
@@ -82,10 +77,10 @@ class Seq2SeqModel(LanguageModel):
                 embeds = tf.nn.embedding_lookup(L, self.en_input_placeholder)
                 embedded = [tf.squeeze(x) for x in tf.split(embeds, [tf.ones([self.config.encode_num_steps], tf.int32)], axis=1)]
         return embedded
-    
+
     def LSTM_cell(self):
         self.cell = tf.contrib.rnn.BasicLSTMCell(self.config.encode_hidden_size)
-    
+
     def encoder_layer(self, inputs):
         """
         inputs: embedded encoder inputs
@@ -102,49 +97,59 @@ class Seq2SeqModel(LanguageModel):
             inputs = output
             outputs.append(output)
             states.append(state)
-            
+
         return (outputs, states)
 
-        # Simple attention function - please let me know if the inputs/outputs look
-      # correct and if they work with your code - still needs work
-      def attention_probs(self, en_states, de_inputs, num_attn_layers,size=1500):
-          cell = tf.contrib.rnn.GRUCell(size)
+    def add_decoding_layer():
+        for i in xrange(self.config.buckets[-1][1]+1):
+            decoder_inputs.append(tf.placeholder(tf.int32, shape=[None],
+                                name="decoder{0}".format(i)))
+            to_weights.append(tf.placeholder(tf.float32, shape=[None],
+                                name="weight{0}".format(i)))
+        targets = [decoder_inputs[i+1] for i in xrange(len(decoder_inputs))]
 
-          # 'c' vector is same dimension as all our hidden states
-          c = xavier_initialization(en_states.shape)
+        return (decoder_inputs, to_weights, targets)
 
-          # get our 'a' coefficients (scalars)
-          a = [c.dot(h_i) for h_i in en_states]
+    # Simple attention function - please let me know if the inputs/outputs look
+    # correct and if they work with your code - still needs work
+    def attention_probs(self, en_states, de_inputs, num_attn_layers,size=1500):
+        cell = tf.contrib.rnn.GRUCell(size)
 
-          # get our 'b' values
-          exps_sum = np.sum([np.exp(a_i) for a_i in a])
-          b = [np.exp(a_i)/exps_sum for a_i in a]
+        # 'c' vector is same dimension as all our hidden states
+        c = xavier_initialization(en_states.shape)
 
-          # then take the b's and multiply by the hidden states to
-          # get output to decoder - need to recalculate for each decoder step?
-          weighted_h_for_decoder = np.sum(tf.mul(b,en_states))
+        # get our 'a' coefficients (scalars)
+        a = [c.dot(h_i) for h_i in en_states]
 
-          # How does the LSTM/GRU cell fit in here? where are the learned params?
+        # get our 'b' values
+        exps_sum = np.sum([np.exp(a_i) for a_i in a])
+        b = [np.exp(a_i)/exps_sum for a_i in a]
 
-          # Local predictive alignment
+        # then take the b's and multiply by the hidden states to
+        # get output to decoder - need to recalculate for each decoder step?
+        weighted_h_for_decoder = np.sum(tf.mul(b,en_states))
 
-          # Get attention masks using en_states
+        # How does the LSTM/GRU cell fit in here? where are the learned params?
 
-          # Alternative implementation using TF ?
-          # Attention mask is a softmax of v^T * tanh(...).
-          s = math_ops.reduce_sum(v[a] * math_ops.tanh(en_states[a] + y),
-                                [2, 3])
-          a = nn_ops.softmax(s)
+        # Local predictive alignment
 
-          """ May eventually want to return
-          something like:
-          A tuple of the form (outputs, state), where:
-              outputs: A list of the same length as decoder_inputs of 2D Tensors of
-                  shape [batch_size x output_size]. These represent the generated outputs.
-              state: The state of each decoder cell the final time-step.
-                  It is a 2D Tensor of shape [batch_size x cell.state_size].
-          """
-          return weighted_h_for_decoder
+        # Get attention masks using en_states
+
+        # Alternative implementation using TF ?
+        # Attention mask is a softmax of v^T * tanh(...).
+        s = math_ops.reduce_sum(v[a] * math_ops.tanh(en_states[a] + y),
+                              [2, 3])
+        a = nn_ops.softmax(s)
+
+        """ May eventually want to return
+        something like:
+        A tuple of the form (outputs, state), where:
+            outputs: A list of the same length as decoder_inputs of 2D Tensors of
+                shape [batch_size x output_size]. These represent the generated outputs.
+            state: The state of each decoder cell the final time-step.
+                It is a 2D Tensor of shape [batch_size x cell.state_size].
+        """
+        return weighted_h_for_decoder
 
     # Loss function
     def add_loss_op(self, inputs, labels):

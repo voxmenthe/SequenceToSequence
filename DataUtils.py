@@ -5,25 +5,28 @@ from tensorflow.python.platform import gfile
 import tensorflow as tf
 
 class DataUtils():
-    _PAD = b"_PAD"
-    _GO = b"_GO"
-    _EOS = b"_EOS"
-    _UNK = b"_UNK"
-    _START_VOCAB = [_PAD, _GO, _EOS, _UNK]
 
-    PAD_ID = 0
-    GO_ID = 1
-    EOS_ID = 2
-    UNK_ID = 3
-    
-    def __init__(self, from_train_file='data/train.en', 
-                 from_vocab_file='data/vocab.en', 
+
+    def __init__(self, from_train_file='data/train.en',
+                 from_vocab_file='data/vocab.en',
                  to_train_file='data/train.vi',
-                 to_vocab_file='data/vocab.vi', 
-                 from_dev_file='data/tst2012.en', 
+                 to_vocab_file='data/vocab.vi',
+                 from_dev_file='data/tst2012.en',
                  to_dev_file='data/tst2012.vi',
-                 from_test_file='data/tst2013.en', 
+                 from_test_file='data/tst2013.en',
                  to_test_file='data/tst2013.vi'):
+
+        self._PAD = b"_PAD"
+        self._GO = b"_GO"
+        self._EOS = b"_EOS"
+        self._UNK = b"_UNK"
+        self._START_VOCAB = [_PAD, _GO, _EOS, _UNK]
+
+        self.PAD_ID = 0
+        self.GO_ID = 1
+        self.EOS_ID = 2
+        self.UNK_ID = 3
+
         self.from_train_file   = from_train_file
         self.source_vocab_file = from_vocab_file
         self.to_train_file     = to_train_file
@@ -122,7 +125,6 @@ class DataUtils():
         return (from_train_ids_path, to_train_ids_path,
               from_dev_ids_path, to_dev_ids_path,
               from_vocab_path, to_vocab_path)
-    
+
 if __name__ == "__main__":
     du = DataUtils()
-    

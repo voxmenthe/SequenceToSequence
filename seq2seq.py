@@ -32,14 +32,7 @@ class Seq2SeqModel(LanguageModel):
 
     def create_feed_dict(self):
         feed_dict = {}
-
-        encoder_inputs = []
-        decoder_inputs = []
-        to_weights = []
-
-        for i in xrange(self.config.buckets[-1][0]):
-            encoder_inputs.append(tf.placeholder(tf.int32, shape=[None],
-                                name="encoder{0}".format(i)))
+        encoder_inputs = self.add_encoding_layer()
         feed_dict['encoder_inputs'] = encoder_inputs
 
         decoder_inputs, to_weights, targets = self.add_decoding_layer()
@@ -50,6 +43,26 @@ class Seq2SeqModel(LanguageModel):
 
         return feed_dict
 
+    def add_encoding_layer():
+        encoder_inputs = []
+
+        for i in xrange(self.config.buckets[-1][0]):
+            encoder_inputs.append(tf.placeholder(tf.int32, shape=[None],
+                                name="encoder{0}".format(i)))
+        return encoder_inputs
+
+    def add_decoding_layer():
+        decoder_inputs = []
+        to_weights = []
+
+        for i in xrange(self.config.buckets[-1][1]+1):
+            decoder_inputs.append(tf.placeholder(tf.int32, shape=[None],
+                                name="decoder{0}".format(i)))
+            to_weights.append(tf.placeholder(tf.float32, shape=[None],
+                                name="weight{0}".format(i)))
+        targets = [decoder_inputs[i+1] for i in xrange(len(decoder_inputs))]
+
+        return (decoder_inputs, to_weights, targets)
 
     def add_placeholders(self):
         self.en_input_placeholder = tf.placeholder(tf.int32, shape=[None])
@@ -78,6 +91,9 @@ class Seq2SeqModel(LanguageModel):
                 embedded = [tf.squeeze(x) for x in tf.split(embeds, [tf.ones([self.config.encode_num_steps], tf.int32)], axis=1)]
         return embedded
 
+    def add_de_embedding(self):
+
+
     def LSTM_cell(self):
         self.cell = tf.contrib.rnn.BasicLSTMCell(self.config.encode_hidden_size)
 
@@ -99,16 +115,6 @@ class Seq2SeqModel(LanguageModel):
             states.append(state)
 
         return (outputs, states)
-
-    def add_decoding_layer():
-        for i in xrange(self.config.buckets[-1][1]+1):
-            decoder_inputs.append(tf.placeholder(tf.int32, shape=[None],
-                                name="decoder{0}".format(i)))
-            to_weights.append(tf.placeholder(tf.float32, shape=[None],
-                                name="weight{0}".format(i)))
-        targets = [decoder_inputs[i+1] for i in xrange(len(decoder_inputs))]
-
-        return (decoder_inputs, to_weights, targets)
 
     # Simple attention function - please let me know if the inputs/outputs look
     # correct and if they work with your code - still needs work
@@ -242,6 +248,9 @@ class Seq2SeqModel(LanguageModel):
 
         data_set = self.load_data()
         self.add_placeholders()
+
+        self.feed_dict = self.create_feed_dict()
+
         output_projection = self.add_projection()
 
         # Create the internal multi-layer cell
@@ -251,5 +260,5 @@ class Seq2SeqModel(LanguageModel):
             single_cell = tf.contrib.rnn.BasicLSTMCell(self.config.size)
             cell = tf.contrib.rnn.MultiRNNCell([single_cell for _ in self.config.num_layers])
 
-        self.feed_dict = self.create_feed_dict()
+
         self.add_model(cell, output_projection, do_decode)

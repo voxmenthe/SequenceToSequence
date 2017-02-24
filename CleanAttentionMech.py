@@ -71,6 +71,8 @@ def generateAttentionProbs(encoder_states, decoder_input,num_layers):
           # 'c' vector is same dimension as all our hidden states
           c = xavier_initialization(en_states.shape)
 
+          # a and b are our learned parameters?
+
           # get our 'a' coefficients (scalars)
           a = [c.dot(h_i) for h_i in en_states]
 

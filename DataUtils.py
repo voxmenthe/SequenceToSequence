@@ -5,16 +5,16 @@ from tensorflow.python.platform import gfile
 import tensorflow as tf
 
 class DataUtils:
-    self._PAD = b"_PAD"
-    self._GO = b"_GO"
-    self._EOS = b"_EOS"
-    self._UNK = b"_UNK"
-    self._START_VOCAB = [_PAD, _GO, _EOS, _UNK]
+    _PAD = b"_PAD"
+    _GO = b"_GO"
+    _EOS = b"_EOS"
+    _UNK = b"_UNK"
+    _START_VOCAB = [_PAD, _GO, _EOS, _UNK]
 
-    self.PAD_ID = 0
-    self.GO_ID = 1
-    self.EOS_ID = 2
-    self.UNK_ID = 3
+    PAD_ID = 0
+    GO_ID = 1
+    EOS_ID = 2
+    UNK_ID = 3
 
     def __init__(self, from_train_file, from_vocab_file, to_train_file,
                  to_vocab_file, from_dev_file, to_dev_file,
@@ -59,7 +59,7 @@ class DataUtils:
             with gfile.GFile(vocabulary_path, "rb") as f:
                 rev_vocab.extend(f.readlines())
             rev_vocab = [tf.compat.as_bytes(line.strip()) for line in rev_vocab]
-            vocab = dict([x,y] for (y,x) in enumerate(rev_vocab)])
+            vocab = dict([x,y] for (y,x) in enumerate(rev_vocab))
             return vocab, rev_vocab
         else:
             raise ValueError("Vocabulary file %s not found", vocabulary_path)

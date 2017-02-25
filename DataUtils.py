@@ -16,11 +16,12 @@ class DataUtils():
                  from_test_file='data/tst2013.en',
                  to_test_file='data/tst2013.vi'):
 
-        self._PAD = b"_PAD"
-        self._GO = b"_GO"
-        self._EOS = b"_EOS"
-        self._UNK = b"_UNK"
-        self._START_VOCAB = [_PAD, _GO, _EOS, _UNK]
+        # Do we need these?
+        # self._PAD = b"_PAD"
+        # self._GO = b"_GO"
+        # self._EOS = b"_EOS"
+        # self._UNK = b"_UNK"
+        # self._START_VOCAB = [_PAD, _GO, _EOS, _UNK]
 
         self.PAD_ID = 0
         self.GO_ID = 1

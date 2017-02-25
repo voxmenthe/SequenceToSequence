@@ -267,8 +267,8 @@ class Seq2SeqModel(LanguageModel):
 
         if self.config.forward_only:
             if projection is not None:
-                for b xrange(len(self.config.buckets)):
-                    self.outputs[b] = tf.matmul(x, projection[0] + projection[1] for x in self.outputs[b])
+                for b in xrange(len(self.config.buckets)):
+                    self.outputs[b] = [tf.matmul(x, projection[0]) + projection[1] for x in self.outputs[b]]
         else:
             params = tf.trainable_variables()
             self.gradient_norms = []

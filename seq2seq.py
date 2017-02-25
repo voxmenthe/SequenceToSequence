@@ -234,6 +234,14 @@ class Seq2SeqModel(LanguageModel):
         all_inputs = encoder_inputs + decoder_inputs + targets + weights
         losses = []
         outputs = []
+
+        # Create the internal multi-layer cell
+        if self.config.num_layers == 1:
+            cell = tf.contrib.rnn.BasicLSTMCell(self.config.size)
+        else:
+            single_cell = tf.contrib.rnn.BasicLSTMCell(self.config.size)
+            cell = tf.contrib.rnn.MultiRNNCell([single_cell for _ in self.config.num_layers])
+
         with tf.variable_scope("en_de_model") as model_scope:
             for i, bucket in enumerate(self.config.buckets):
                 buckets_outputs, _ = lambda x, y: self.add_embeddings(x, y, cell, projection, do_decode)
@@ -311,22 +319,14 @@ class Seq2SeqModel(LanguageModel):
         else:
             return outputs[1], outputs[2], None
 
-    def __init__(self, do_decode=False):
-        self.config = Config
-
+    def create_model(self, is_decode):
         data_set = self.load_data()
         self.add_placeholders()
 
         self.feed_dict = self.create_feed_dict()
 
         output_projection = self.add_projection()
+        self.add_model(output_projection, do_decode)
 
-        # Create the internal multi-layer cell
-        if self.config.num_layers == 1:
-            cell = tf.contrib.rnn.BasicLSTMCell(self.config.size)
-        else:
-            single_cell = tf.contrib.rnn.BasicLSTMCell(self.config.size)
-            cell = tf.contrib.rnn.MultiRNNCell([single_cell for _ in self.config.num_layers])
-
-
-        self.add_model(cell, output_projection, do_decode)
+    def __init__(self, do_decode=False):
+        self.config = Config

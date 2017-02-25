@@ -35,7 +35,7 @@ class Config(object):
     dev_dir                      = "data/"
     max_train_data_size          = 200
     steps_per_checkpoint         = 5
-    forward_only                 = True
+    forward_only                 = False
 
     # Buckets
     buckets = [(10,50)]

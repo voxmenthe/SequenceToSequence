@@ -1,4 +1,6 @@
-
+from tensorflow.python.ops.rnn_cell_impl import _RNNCell as RNNCell
+from tensorflow.python.ops.math_ops import sigmoid
+from tensorflow.python.ops.math_ops import tanh
 # we are going to call this attention cell at every time step
 # just need to pass in hidden states from the encoder
 # the prev_decoder_state is already there in the RNN base class??
@@ -22,23 +24,23 @@ class attn_cell(RNNCell):
     return self._num_units
 
   # calculate context vector c_i
-  def get_context(self,_en_states,prev_decoder_state): # A1.2	  
+  def get_context(self,_en_states,prev_decoder_state):  # A1.2    
 
-    # score for every input time step
-    # still need to check which axis is the correct one
-	  scores = _linear(tf.tanh(_linear(prev_decoder_state,self._num_units,bias=False)+
-      _linear(_en_states,self._num_units,bias=False),axis=0),1,bias=False)
+    #  # score for every input time step
+    #  # still need to check which axis is the correct one
+    scores = _linear(tf.tanh(_linear(prev_decoder_state,self._num_units,bias=False)+_linear(_en_states,self._num_units,bias=False),axis=0),1,bias=False)
 
     # still need to check which axis is the correct one
     scores_exp_sum = tf.reduce_sum(tf.exp(scores),axis=0)
     probs_alpha_ij = tf.exp(scores) / scores_exp_sum
+
     # still need to check which axis is the correct one
     context_vector_c_i = tf.reduce_sum(probs_alpha_ij * _en_states,axis=0)
 
     # this can be one of the variables to be returned in session.run()
     self._attn_maps.append(probs_alpha_ij)
 
-	return context_vector_c_i
+    return context_vector_c_i
 
   # enhanced GRU which needs a context vector c_i which
   # needs to be recalculated at every time step by calling get_context

@@ -17,11 +17,11 @@ class DataUtils():
                  to_test_file='data/tst2013.vi'):
 
         # Do we need these?
-        # self._PAD = b"_PAD"
-        # self._GO = b"_GO"
-        # self._EOS = b"_EOS"
-        # self._UNK = b"_UNK"
-        # self._START_VOCAB = [_PAD, _GO, _EOS, _UNK]
+        self._PAD = b"_PAD"
+        self._GO = b"_GO"
+        self._EOS = b"_EOS"
+        self._UNK = b"_UNK"
+        self._START_VOCAB = [_PAD, _GO, _EOS, _UNK]
 
         self.PAD_ID = 0
         self.GO_ID = 1
@@ -62,7 +62,12 @@ class DataUtils():
         self.en_vocab_to_test = rev_vocab
 
 
+# Regular expressions used to tokenize.
+_WORD_SPLIT = re.compile(b"([.,!?\"':;)(])")
+_DIGIT_RE = re.compile(br"\d")
+
     def initialize_vocabulary(self, vocabulary_path):
+        print("called initialize_vocabulary method")
         if gfile.Exists(vocabulary_path):
             rev_vocab = []
             with gfile.GFile(vocabulary_path, "rb") as f:
@@ -73,24 +78,22 @@ class DataUtils():
         else:
             raise ValueError("Vocabulary file %s not found", vocabulary_path)
 
+    # Rewrote basic_tokenizer
     def basic_tokenizer(sentence):
-        """Very basic tokenizer: split the sentence into a list of tokens."""
-        words = []
-        for space_separated_fragment in sentence.strip().split():
-            words.extend(self._WORD_SPLIT.split(space_separated_fragment))
-        return [w for w in words if w]
+        return [z.strip() for z in sent.split(" ")]
 
-    def sentence_to_token_ids(sentence, vocabulary_path, tokenizer=None, normalize_digits=True):
-        if tokenizer:
-            words = tokenizer(sentence)
-        else:
-            vocabulary, _ = self.initialize_vocabulary(vocabulary_path)
-            words = self.basic_tokenizer(sentence)
-            if not normalize_digits:
-                return [vocabulary.get(w, self.UNK_ID) for w in words]
+    # removed other tokenizer option
+    def sentence_to_token_ids(sentence, vocabulary_path, normalize_digits=True):
+        print "1"
+        vocabulary, _ = self.initialize_vocabulary(vocabulary_path)
+        print "2"
+        words = self.basic_tokenizer(sentence)
+        print "3"
+        if not normalize_digits:
+            return [vocabulary.get(w, self.UNK_ID) for w in words]
 
-            # Normalize digits by 0 before looking words up in the vocabulary.
-            return [vocabulary.get(self._DIGIT_RE.sub(b"0", w), UNK_ID) for w in words]
+        # Normalize digits by 0 before looking words up in the vocabulary.
+        return [vocabulary.get(self._DIGIT_RE.sub(b"0", w), UNK_ID) for w in words]
 
     def data_to_token_ids(data_path, target_path, vocabulary_path,
                       tokenizer=None, normalize_digits=True):

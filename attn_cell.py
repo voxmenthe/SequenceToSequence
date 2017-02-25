@@ -11,6 +11,7 @@ class attn_cell(RNNCell):
     self._num_units = num_units
     self._activation = activation
     self._en_states = tf.concat(en_states,0) # just tensorizing
+    self._attn_maps = []
 
   @property
   def state_size(self):
@@ -30,6 +31,9 @@ class attn_cell(RNNCell):
     scores_exp_sum = tf.reduce_sum(tf.exp(scores),axis=??)
     probs_alpha_ij = tf.exp(scores) / scores_exp_sum
     context_vector_c_i = tf.reduce_sum(probs_alpha_ij * _en_states,axis=0?1?)
+
+    # this can be one of the variables to be returned in session.run()
+    self._attn_maps.append(probs_alpha_ij)
 
 	return context_vector_c_i
 

@@ -5,7 +5,7 @@ from DataUtils import DataUtils
 from Config import Config
 from attn_cell import attn_cell, _linear
 
-class Seq2SeqModel(LanguageModel):
+class Seq2SeqModel():
 
     def load_data(self):
         dataset = [[] for _ in self.config.buckets]

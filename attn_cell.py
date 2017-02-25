@@ -25,12 +25,15 @@ class attn_cell(RNNCell):
   def get_context(self,_en_states,prev_decoder_state): # A1.2	  
 
     # score for every input time step
+    # still need to check which axis is the correct one
 	  scores = _linear(tf.tanh(_linear(prev_decoder_state,self._num_units,bias=False)+
-      _linear(_en_states,self._num_units,bias=False),axis=??),1,bias=False)
+      _linear(_en_states,self._num_units,bias=False),axis=0),1,bias=False)
 
-    scores_exp_sum = tf.reduce_sum(tf.exp(scores),axis=??)
+    # still need to check which axis is the correct one
+    scores_exp_sum = tf.reduce_sum(tf.exp(scores),axis=0)
     probs_alpha_ij = tf.exp(scores) / scores_exp_sum
-    context_vector_c_i = tf.reduce_sum(probs_alpha_ij * _en_states,axis=0?1?)
+    # still need to check which axis is the correct one
+    context_vector_c_i = tf.reduce_sum(probs_alpha_ij * _en_states,axis=0)
 
     # this can be one of the variables to be returned in session.run()
     self._attn_maps.append(probs_alpha_ij)

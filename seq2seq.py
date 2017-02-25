@@ -33,10 +33,10 @@ class Seq2SeqModel(LanguageModel):
 
     def create_feed_dict(self):
         feed_dict = {}
-        encoder_inputs = self.add_encoding_layer()
+        encoder_inputs = self.bucketize_encoding_layer()
         feed_dict['encoder_inputs'] = encoder_inputs
 
-        decoder_inputs, to_weights, targets = self.add_decoding_layer()
+        decoder_inputs, to_weights, targets = self.bucketize_decoding_layer()
 
         feed_dict['decoder_inputs'] = decoder_inputs
         feed_dict['to_weights'] = to_weights
@@ -44,7 +44,7 @@ class Seq2SeqModel(LanguageModel):
 
         return feed_dict
 
-    def add_encoding_layer():
+    def bucketize_encoding_layer():
         encoder_inputs = []
 
         for i in xrange(self.config.buckets[-1][0]):
@@ -52,7 +52,7 @@ class Seq2SeqModel(LanguageModel):
                                 name="encoder{0}".format(i)))
         return encoder_inputs
 
-    def add_decoding_layer():
+    def bucketize_decoding_layer():
         decoder_inputs = []
         to_weights = []
 
@@ -88,11 +88,16 @@ class Seq2SeqModel(LanguageModel):
         with tf.device('/cpu:0'):
             with tf.variable_scope("embedding") as scope:
                 L = tf.get_variable("L",[self.config.from_vocab_size, self.config.encode_hidden_size], initializer = self.config.initializer)
-                embeds = tf.nn.embedding_lookup(L, self.en_input_placeholder)
+                embeds = tf.nn.embedding_lookup(L, self.feed_dict['encoder_inputs'])
                 embedded = [tf.squeeze(x) for x in tf.split(embeds, [tf.ones([self.config.encode_num_steps], tf.int32)], axis=1)]
         return embedded
 
-    def add_de_embedding(self):
+    def add_decode_embedding(self):
+        with tf.variable_scope("decode_embedding") as decode_scope:
+            L = tf.get_variable("L", [self.config.to_vocab_size, self.decode_hidden_size], initializer=self.config.initializer)
+            embeds = tf.nn.embedding_lookup(L, self.feed_dict['decoder_inputs'])
+            embedded = [tf.squeeze(x) for x in tf.split(embeds, [tf.ones([self.config.decode_num_steps], tf.int32)], axis=1)]
+        return embedded
 
 
     def LSTM_cell(self):
@@ -117,9 +122,24 @@ class Seq2SeqModel(LanguageModel):
 
         return (outputs, states)
 
+    def decoder_layer(self, inputs):
+        """
+        inputs: embedded encoder inputs
+        outputs: a tuple of (outputs, states)
+        """
+        initial_state = (tf.zeros([self.config.batch_size, self.config.decode_hidden_size]), tf.zeros([self.config.batch_size, self.config.decode_hidden_size]))
+        state = initial_state
+        cell = self.cell
+        outputs = []
+        states = []
 
+        for i in xrange(self.config.decode_num_steps):
+            output, state = cell(inputs, state)
+            inputs = output
+            outputs.append(output)
+            states.append(state)
 
-
+        return (outputs, states)
 
     # Loss function
     def add_loss_op(self, inputs, labels):
@@ -140,6 +160,35 @@ class Seq2SeqModel(LanguageModel):
             )
         return softmax_loss
 
+
+    def add_embeddings(self, encoder_inputs, decoder_inputs, cell, is_decode):
+        embeddings = tf.contrib.legacy_seq2seq.embedding_attention_seq2seq(
+            encoder_inputs, decoder_inputs, cell,
+            num_encoder_symbols=self.config.from_vocab_size,
+            num_decoder_symbols=self.config.to_vocab_size,
+            embedding_size=self.config.size,
+            output_projection=projection,
+            feed_previous=is_decode,
+            dtype=self.config.dtype
+        )
+
+    def add_to_model_with_buckets(self, encoder_inputs, decoder_inputs, targets, weights):
+        all_inputs = encoder_inputs + decoder_inputs + targets + weights
+        losses = []
+        outputs = []
+        with tf.variable_scope("en_de_model") as model_scope:
+            for i, bucket in enumerate(self.config.buckets):
+                buckets_outputs, _ = lambda x, y: self.add_embeddings(x, y, cell, projection, do_decode)
+                outputs.append(buckets_outputs)
+                losses.append(sequence_loss(
+                                outputs[-1],
+                                targets[:buckets[1]],
+                                weights[:buckets[1]],
+                                softmax_loss_function=self.add_loss_op
+                                ))
+        return outputs, losses
+
+
     # Add model
     def add_model(self, cell, projection):
         encoder_inputs = self.feed_dict['encoder_inputs']
@@ -147,10 +196,8 @@ class Seq2SeqModel(LanguageModel):
         to_weights     = self.feed_dict['to_weights']
         targets        = self.feed_dict['targets']
 
-        self.outputs, self.losses = tf.contrib.legacy_seq2seq.model_with_buckets(
-            encoder_inputs, decoder_inputs, targets, to_weights,
-            self.config.buckets, lambda x, y: add_embedding(x, y, cell, projection, self.config.forward_only),
-            softmax_loss_function=add_loss_op
+        self.outputs, self.losses = self.add_to_model_with_buckets(
+                encoder_inputs, decoder_inputs, targets, weights
         )
 
         if self.config.forward_only:
@@ -206,7 +253,6 @@ class Seq2SeqModel(LanguageModel):
             return None, outputs[0], outputs[1]
         else:
             return outputs[1], outputs[2], None
-
 
     def __init__(self, do_decode=False):
         self.config = Config

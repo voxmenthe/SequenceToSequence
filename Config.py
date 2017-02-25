@@ -38,7 +38,7 @@ class Config(object):
     forward_only                 = True
 
     # Buckets
-    buckets = [(5,10), (10,15)]
+    buckets = [(10,50)]
 
     # Other config variables
     num_samples                  = 512

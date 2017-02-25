@@ -3,7 +3,7 @@ import random
 
 from DataUtils import DataUtils
 from Config import Config
-from attn_cell import attn_cell
+from attn_cell import attn_cell, _linear
 
 class Seq2SeqModel(LanguageModel):
 
@@ -102,6 +102,8 @@ class Seq2SeqModel(LanguageModel):
 
     def LSTM_cell(self):
         self.cell = tf.contrib.rnn.BasicLSTMCell(self.config.encode_hidden_size)
+        self.decoder_cell = tf.contrib.rnn.attn_cell(self.config.encode_hidden_size,en_states)
+        self.encoder_cell = tf.contrib.rnn.BasicLSTMCell(self.config.encode_hidden_size)
 
     def encoder_layer(self, inputs):
         """
@@ -129,7 +131,7 @@ class Seq2SeqModel(LanguageModel):
         """
         initial_state = (tf.zeros([self.config.batch_size, self.config.decode_hidden_size]), tf.zeros([self.config.batch_size, self.config.decode_hidden_size]))
         state = initial_state
-        cell = self.cell
+        cell = self.decoder_cell
         outputs = []
         states = []
 
